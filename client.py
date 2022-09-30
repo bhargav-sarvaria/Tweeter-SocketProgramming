@@ -15,6 +15,7 @@ localIp = sys.argv[3] if len(sys.argv) > 3 else "127.0.0.1"
 serverAddressPort = (sys.argv[4] if len(sys.argv) > 4 else localIp, 17000)
 encoding = 'utf-8'
 # "10.120.70.117"
+
 LEFT_PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 17001
 RIGHT_PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 17002
 handle = ''
@@ -27,7 +28,7 @@ UDPClientSocketRcv = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM
 UDPClientSocketSend.bind((localIp, LEFT_PORT))
 UDPClientSocketRcv.bind((localIp, RIGHT_PORT))
 
-# Send to server using created UDP socket
+# Send message to a process and return the response
 def send_message(req, addr):
     resp = {}
     try:
@@ -39,6 +40,7 @@ def send_message(req, addr):
         resp = {'code': 4, 'message' : 'Error while sending request to server'}
     return resp
 
+# Listen to any requests on Right Port - Ex: setup logical ring, propogate tweet
 def handle_incoming_messages():
     while(True):
         try:
@@ -65,43 +67,58 @@ def handle_incoming_messages():
         except Exception as e:
             print(e)
 
+
 if __name__ == '__main__':
     while True:
+        # Read the desired handle name from user
         handle = input('Enter a handle name to register:')
         data = {'handle' : handle, 'IP': localIp, 'LEFT_PORT': LEFT_PORT, 'RIGHT_PORT': RIGHT_PORT, 'followers': []}
         request_obj = {'type': 'register', 'rcv_ip': localIp, 'rcv_port': LEFT_PORT, 'data': data }
         resp = send_message(request_obj, serverAddressPort)
         print(resp['message'])
+
+        # If the handle name is registered successfully, start the application and read commands from user
         if resp['status'] == 1:
             break
     
-    threading.Thread(target=handle_incoming_messages).start()
+    # Start a process to listen to any incoming messages on Right Port
+    thread = threading.Thread(target=handle_incoming_messages).start()
+    thread.start()
 
     while True:
         try:
             command = input('Enter a command:').split(' ')
+            
             if command[0] == 'query' and command[1] == 'handles':
-                request_obj = {'type': 'query_handles', 'rcv_ip': localIp, 'rcv_port': LEFT_PORT, 'data': data }
+                request_obj = {'type': 'query_handles', 'rcv_ip': localIp, 'rcv_port': LEFT_PORT }
                 resp = send_message(request_obj, serverAddressPort)
 
+                # Print the output of Count of users and their details
                 if resp['status'] == 1:
                     print(f"User Count: {resp['count']}")
                     print(json.dumps(resp['data'], indent=2))
                 else:
                     print(resp['message'])
+
             elif command[0] == 'follow':
+                # Create and send request to follow a user
                 to_follow = command[1][1:]
                 request_obj = {'type': 'follow', 'rcv_ip': localIp, 'rcv_port': LEFT_PORT, 'handle': handle, 'to_follow': to_follow }
                 resp = send_message(request_obj, serverAddressPort)
                 print(resp['message'])
+            
             elif command[0] == 'drop':
+                # Create and send request to unfollow a user
                 to_drop = command[1][1:]
                 request_obj = {'type': 'drop', 'rcv_ip': localIp, 'rcv_port': LEFT_PORT, 'handle': handle, 'to_drop': to_drop }
                 resp = send_message(request_obj, serverAddressPort)
                 print(resp['message'])
+            
             elif command[0] == 'exit':
+                # Break the loop to quit the application
                 print('Exiting the application!')
                 break
+            
             elif command[0] == 'tweet':
                 tweet = command[1]
                 request_obj = {'type': 'tweet', 'rcv_ip': localIp, 'rcv_port': LEFT_PORT, 'handle': handle}
@@ -129,5 +146,11 @@ if __name__ == '__main__':
                         
             else:
                 print('Invalid command')
+
+    
         except Exception as e:
             print(e)
+
+    
+    thread.raise_exception()
+    thread.join()

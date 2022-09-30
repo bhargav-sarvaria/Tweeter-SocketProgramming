@@ -14,7 +14,7 @@ encoding = 'utf-8'
 # Database for storing information of Tweeter users
 USERS = []
 
-# Create a datagram socket
+# Create a UDP socket
 UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPServerSocket.bind((localIP, localPort))
 print("UDP server up and listening")
@@ -44,7 +44,7 @@ def tweet(req):
         return resp
     except Exception as e:
         print(e)
-        resp = {'status': 2, 'type': 'follow', 'message': 'Internal error in Tracker'}
+        resp = {'status': 2, 'type': 'tweet', 'message': 'Internal error in Tracker'}
         UDPServerSocket.sendto(json.dumps(resp).encode(encoding), (req['rcv_ip'], req['rcv_port']))
         return resp
 
@@ -66,17 +66,18 @@ def drop(req):
                 UDPServerSocket.sendto(json.dumps(resp).encode(encoding), (req['rcv_ip'], req['rcv_port']))
                 return
 
-        resp = {'status': 3, 'type': 'follow', 'message': f"Handle {req['to_drop']} does not exist!"}
+        resp = {'status': 3, 'type': 'drop', 'message': f"Handle {req['to_drop']} does not exist!"}
         UDPServerSocket.sendto(json.dumps(resp).encode(encoding), (req['rcv_ip'], req['rcv_port']))
         return
         
     except Exception as e:
         print(e)
-        resp = {'status': 2, 'type': 'follow', 'message': 'Internal error in Tracker'}
+        resp = {'status': 2, 'type': 'drop', 'message': 'Internal error in Tracker'}
         UDPServerSocket.sendto(json.dumps(resp).encode(encoding), (req['rcv_ip'], req['rcv_port']))
         return
 
 def follow(req):
+    # Check if both the users exist and user1 is not following user2 already
     try:
         for u in USERS:
             if u['handle'] == req['handle']:
@@ -88,14 +89,18 @@ def follow(req):
                         user['followers'] = followers
                         USERS[idx] = user
                         print(json.dumps(USERS, indent=2))
+
+                        # If it is a valid request return success
                         resp = {'status': 1, 'type': 'follow', 'message': f"{req['handle']} is now following {req['to_follow']}"}
                         UDPServerSocket.sendto(json.dumps(resp).encode(encoding), (req['rcv_ip'], req['rcv_port']))
                         return
 
+                # If the handle to follow does not exist return failure
                 resp = {'status': 3, 'type': 'follow', 'message': f"Handle {req['to_follow']} does not exist!"}
                 UDPServerSocket.sendto(json.dumps(resp).encode(encoding), (req['rcv_ip'], req['rcv_port']))
                 return
 
+        # If the handle name of user process does not exist return failure``
         resp = {'status': 3, 'type': 'follow', 'message': f"Handle {req['handle']} does not exist!"}
         UDPServerSocket.sendto(json.dumps(resp).encode(encoding), (req['rcv_ip'], req['rcv_port']))
         return
@@ -108,6 +113,7 @@ def follow(req):
 
 # Function to handle registeration of new users
 def register_user(req):
+    # Check if the IP and Port combination or the handle name already exists
     data = req['data']
     for user in USERS:
         if user['handle'] == data['handle']:
@@ -123,12 +129,14 @@ def register_user(req):
             UDPServerSocket.sendto(json.dumps(resp).encode(encoding), (req['rcv_ip'], req['rcv_port']))
             return
 
+    # If it is a valid request return sucesss
     USERS.append(data)
     resp = {'status': 1, 'type': 'register', 'message': 'handle registered successfully'}  
     UDPServerSocket.sendto(json.dumps(resp).encode(encoding), (req['rcv_ip'], req['rcv_port']))
 
 # Function to return the count and list of registered users
 def query_handles(req):
+    # Return the count and list of users
     resp = {'status': 1, 'type': 'query_handles', 'count': len(USERS), 'data': USERS}  
     UDPServerSocket.sendto(json.dumps(resp).encode(encoding), (req['rcv_ip'], req['rcv_port']))
     return resp
