@@ -6,8 +6,8 @@ import sys
 # arg1 -> Port for Tracker
 # arg2 -> IP address of Tracker
 
-localIP     = sys.argv[2] if len(sys.argv) > 2 else "127.0.0.1"
-localPort   = sys.argv[1] if len(sys.argv) > 1 else 17000
+localIP     = sys.argv[2] if len(sys.argv) > 2 else '127.0.0.1'
+localPort   = int(sys.argv[1]) if len(sys.argv) > 1 else 17000
 bufferSize  = 1024
 encoding = 'utf-8'
 
@@ -61,7 +61,6 @@ def drop(req):
                 followers = sorted(followers, key=lambda d: d['handle'])
                 user['followers'] = followers
                 USERS[idx] = user
-                print(json.dumps(USERS, indent=2))
                 resp = {'status': 1, 'type': 'drop', 'message': f"{req['handle']} is not following {req['to_drop']} anymore"}
                 UDPServerSocket.sendto(json.dumps(resp).encode(encoding), (req['rcv_ip'], req['rcv_port']))
                 return
@@ -88,7 +87,6 @@ def follow(req):
                         followers = sorted(followers, key=lambda d: d['handle'])
                         user['followers'] = followers
                         USERS[idx] = user
-                        print(json.dumps(USERS, indent=2))
 
                         # If it is a valid request return success
                         resp = {'status': 1, 'type': 'follow', 'message': f"{req['handle']} is now following {req['to_follow']}"}
@@ -146,12 +144,17 @@ while(True):
     try:
         bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
         message = json.loads(bytesAddressPair[0].decode(encoding))
+
+        print(json.dumps(message, indent=2))
+
         address = bytesAddressPair[1]
         if message['type'] == 'tweet':
             resp = tweet(message)
             if resp['status'] == 1 and len(resp['followers']) > 1:
                 bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
                 message = json.loads(bytesAddressPair[0].decode(encoding))
+
+                print(json.dumps(message, indent=2))
         else:
             threading.Thread(target=handle_client, args=(message,)).start()
     except Exception as e:

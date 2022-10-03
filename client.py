@@ -5,14 +5,14 @@ import threading
 
 # arg1 -> Port to Send Messages
 # arg2 -> Port to Receive Messages
-# arg3 -> localIp address
-# arg4 -> IP address of the Tracker process
+# arg3 -> IP address of the Tracker process
+# arg4 -> localIp address
 
 # resp code 1 = Successful, 2 = Server Error, 3 = Bad Request, 4 = Internal Error
 
 bufferSize = 1024
-localIp = sys.argv[3] if len(sys.argv) > 3 else "127.0.0.1"
-serverAddressPort = (sys.argv[4] if len(sys.argv) > 4 else localIp, 17000)
+localIp = sys.argv[4] if len(sys.argv) > 4 else "127.0.0.1"
+serverAddressPort = (sys.argv[3] if len(sys.argv) > 3 else '127.0.0.1', 17000)
 encoding = 'utf-8'
 # "10.120.70.117"
 
@@ -35,6 +35,7 @@ def send_message(req, addr):
         UDPClientSocketSend.sendto(json.dumps(req).encode(encoding), addr)
         bytesAddressPair = UDPClientSocketSend.recvfrom(bufferSize)
         resp = json.loads(bytesAddressPair[0].decode(encoding))
+        print(json.dumps(resp, indent=2))
     except Exception as e:
         print(e)
         resp = {'code': 4, 'message' : 'Error while sending request to server'}
@@ -46,6 +47,8 @@ def handle_incoming_messages():
         try:
             bytesAddressPair = UDPClientSocketRcv.recvfrom(bufferSize)
             message = json.loads(bytesAddressPair[0].decode(encoding))
+
+            print(json.dumps(message, indent=2))
 
             if message['type'] == 'setup':
                 neighbours[message['handle']] = message['data']
@@ -82,7 +85,7 @@ if __name__ == '__main__':
             break
     
     # Start a process to listen to any incoming messages on Right Port
-    thread = threading.Thread(target=handle_incoming_messages).start()
+    thread = threading.Thread(target=handle_incoming_messages)
     thread.start()
 
     while True:
