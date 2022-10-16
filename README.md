@@ -1,4 +1,4 @@
-# socket-project
+# Tweeter-SocketProgramming
 
 Developed a peer-to-peer application alike Twitter.
 Designed and implemented custom protocols for communication b/w processes using UDP sockets on Python.
