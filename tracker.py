@@ -3,7 +3,6 @@ import threading
 import json
 import sys
 import copy
-from xml.sax import handler
 
 # arg1 -> Port for Tracker
 # arg2 -> IP address of Tracker

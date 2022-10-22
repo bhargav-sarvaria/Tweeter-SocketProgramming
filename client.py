@@ -19,6 +19,8 @@ exitapp = False
 LEFT_PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 17001
 RIGHT_PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 17002
 handle = ''
+
+# Store state information for logical ring
 neighbours = {}
 
 # Create a UDP socket at client side
